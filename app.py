@@ -215,6 +215,43 @@ def get_certificates(mobile):
 
 
 # ============================================================
+# GET SINGLE DOCUMENT (TYPE + IDENTIFIER VALIDATION)
+# ============================================================
+@app.route("/document/<mobile>/<cert_type>/<identifier>", methods=["GET"])
+def get_single_document(mobile, cert_type, identifier):
+    try:
+        user_ref = db.collection("users").document(mobile)
+        if not user_ref.get().exists:
+            return jsonify({"error": "User not found"}), 404
+
+        certs = user_ref.collection("certificates").stream()
+
+        # Normalize inputs
+        req_type = str(cert_type or "").strip().lower()
+        req_identifier = str(identifier or "").replace(" ", "").strip()
+
+        for cert in certs:
+            data = cert.to_dict()
+
+            db_type = str(data.get("certificate_type") or "").strip().lower()
+            db_identifier = str(data.get("identifier_number") or "").replace(" ", "").strip()
+
+            if db_type == req_type and db_identifier == req_identifier:
+                return jsonify({
+                    "status": "success",
+                    "document": data
+                }), 200
+
+        return jsonify({
+            "error": "Document not found for this certificate type"
+        }), 404
+
+    except Exception as e:
+        print("❌ ERROR:", e)
+        return jsonify({"error": "Server error"}), 500
+
+
+# ============================================================
 # RUN LOCALLY
 # ============================================================
 if __name__ == "__main__":
