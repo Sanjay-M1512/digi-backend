@@ -214,13 +214,25 @@ def get_certificates(mobile):
     })
 
 
+from urllib.parse import unquote
+
 # ============================================================
 # GET SINGLE DOCUMENT (TYPE + IDENTIFIER VALIDATION)
 # ============================================================
 @app.route("/document/<mobile>/<cert_type>/<identifier>", methods=["GET"])
 def get_single_document(mobile, cert_type, identifier):
     try:
+        # ⭐ Decode URL-encoded values (important!)
+        mobile = unquote(mobile)
+        cert_type = unquote(cert_type)
+        identifier = unquote(identifier)
+
+        print("📥 Received Mobile:", mobile)
+        print("📥 Received Certificate Type:", cert_type)
+        print("📥 Received Identifier:", identifier)
+
         user_ref = db.collection("users").document(mobile)
+
         if not user_ref.get().exists:
             return jsonify({"error": "User not found"}), 404
 
@@ -228,13 +240,19 @@ def get_single_document(mobile, cert_type, identifier):
 
         # Normalize inputs
         req_type = str(cert_type or "").strip().lower()
+        # Remove only spaces inside number (ex: "1234 5678" → "12345678")
         req_identifier = str(identifier or "").replace(" ", "").strip()
+
+        print("🔍 Checking for Type:", req_type)
+        print("🔍 Checking for Identifier:", req_identifier)
 
         for cert in certs:
             data = cert.to_dict()
 
             db_type = str(data.get("certificate_type") or "").strip().lower()
             db_identifier = str(data.get("identifier_number") or "").replace(" ", "").strip()
+
+            print("➡️ DB TYPE:", db_type, "| DB IDENT:", db_identifier)
 
             if db_type == req_type and db_identifier == req_identifier:
                 return jsonify({
@@ -249,6 +267,7 @@ def get_single_document(mobile, cert_type, identifier):
     except Exception as e:
         print("❌ ERROR:", e)
         return jsonify({"error": "Server error"}), 500
+
 
 # ============================================================
 # GET USER BASIC DETAILS BY MOBILE (NO CERTIFICATES)
