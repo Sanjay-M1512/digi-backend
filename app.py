@@ -250,6 +250,35 @@ def get_single_document(mobile, cert_type, identifier):
         print("❌ ERROR:", e)
         return jsonify({"error": "Server error"}), 500
 
+# ============================================================
+# GET USER BASIC DETAILS BY MOBILE (NO CERTIFICATES)
+# ============================================================
+@app.route("/user/<mobile>", methods=["GET"])
+def get_user_details(mobile):
+    try:
+        user_ref = db.collection("users").document(mobile)
+        user_doc = user_ref.get()
+
+        if not user_doc.exists:
+            return jsonify({"error": "User not found"}), 404
+
+        user_data = user_doc.to_dict()
+
+        return jsonify({
+            "status": "success",
+            "user": {
+                "name": user_data.get("name"),
+                "mobile": user_data.get("mobile"),
+                "dob": user_data.get("dob") or user_data.get("DOB"),
+                "gender": user_data.get("gender") or user_data.get("Gender"),
+                "createdAt": user_data.get("createdAt") or user_data.get("CreatedAt")
+            }
+        }), 200
+
+
+    except Exception as e:
+        print("❌ ERROR:", e)
+        return jsonify({"error": "Server error"}), 500
 
 # ============================================================
 # RUN LOCALLY
